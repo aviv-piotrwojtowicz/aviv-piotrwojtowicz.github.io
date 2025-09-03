@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON to Table Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            padding: 20px;
+            gap: 0;
+        }
+
+        .column {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow: hidden;
+            min-width: 200px;
+        }
+
+        .left-column {
+            flex: 0 0 50%;
+            margin-right: 10px;
+        }
+
+        .right-column {
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .splitter {
+            width: 8px;
+            background: #e0e0e0;
+            cursor: col-resize;
+            position: relative;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .splitter:hover {
+            background: #3498db;
+        }
+
+        .splitter::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: #999;
+            border-radius: 1px;
+        }
+
+        .splitter:hover::before {
+            background: white;
+        }
+
+        .resizing-columns {
+            cursor: col-resize !important;
+            user-select: none;
+        }
+
+        .resizing-columns * {
+            cursor: col-resize !important;
+            user-select: none;
+        }
+
+        .column h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: calc(100% - 120px);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: #3498db;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .search-container {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .search-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter {
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .search-filter label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .search-filter input {
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-filter input:focus {
+            border-color: #3498db;
+        }
+
+        .search-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .search-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .search-btn:hover {
+            background-color: #219a52;
+        }
+
+        .clear-search-btn {
+            background-color: #95a5a6;
+        }
+
+        .clear-search-btn:hover {
+            background-color: #7f8c8d;
+        }
+
+        .table-container {
+            height: calc(100% - 160px);
+            overflow: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 100%;
+            table-layout: fixed;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+        }
+
+        th:hover {
+            background-color: #e9ecef;
+        }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 11;
+        }
+
+        .resize-handle:hover {
+            background-color: rgba(52, 152, 219, 0.3);
+        }
+
+        .resizing {
+            cursor: col-resize !important;
+        }
+
+        .resizing * {
+            cursor: col-resize !important;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        .error {
+            color: #e74c3c;
+            background-color: #fdf2f2;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .success {
+            color: #27ae60;
+            background-color: #f2f8f5;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .stats {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .clear-btn {
+            background-color: #e74c3c;
+            margin-left: 10px;
+        }
+
+        .clear-btn:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Input Column -->
+        <div class="column left-column">
+            <h2>JSON Input</h2>
+            <textarea id="jsonInput" placeholder="Paste your JSON here... 
+
+Example format:
+{
+  &quot;body&quot;: &quot;{\&quot;rows\&quot;:\&quot;[{\\\&quot;id\\\&quot;:\\\&quot;1\\\&quot;,\\\&quot;name\\\&quot;:\\\&quot;John\\\&quot;}]\&quot;}&quot;
+}
+
+Or just the rows array:
+[{&quot;id&quot;:&quot;1&quot;,&quot;name&quot;:&quot;John&quot;}]"></textarea>
+            <div>
+                <button onclick="parseJSON()">Parse to Table</button>
+                <button class="clear-btn" onclick="clearAll()">Clear All</button>
+            </div>
+            <div id="status"></div>
+        </div>
+
+        <!-- Splitter -->
+        <div class="splitter" id="splitter"></div>
+
+        <!-- Output Column -->
+        <div class="column right-column">
+            <h2>Parsed Table</h2>
+            <div class="table-container" id="tableContainer">
+                <div style="padding: 20px; text-align: center; color: #666;">
+                    <p>No data to display</p>
+                    <p style="font-size: 12px; margin-top: 10px;">Paste JSON in the left panel and click "Parse to Table"</p>
+                </div>
+            </div>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <script>
+        function parseJSON() {
+            const input = document.getElementById('jsonInput').value.trim();
+            const statusDiv = document.getElementById('status');
+            const tableContainer = document.getElementById('tableContainer');
+            const statsDiv = document.getElementById('stats');
+
+            // Clear previous status
+            statusDiv.innerHTML = '';
+            statsDiv.innerHTML = '';
+
+            if (!input) {
+                showError('Please enter some JSON data');
+                return;
+            }
+
+            try {
+                const rows = extractRowsFromJSON(input);
+                
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    showError('No valid rows found in the JSON data');
+                    return;
+                }
+
+                // Generate table
+                const table = generateTable(rows);
+                tableContainer.innerHTML = table;
+                
+                // Initialize column resizing after table is created
+                initializeColumnResizing();
+                
+                // Initialize table filters
+                initializeTableFilters();
+                
+                // Show success message and stats
+                showSuccess(`Successfully parsed ${rows.length} rows`);
+                const columns = Object.keys(rows[0]).length;
+                statsDiv.innerHTML = `Rows: ${rows.length} | Columns: ${columns}`;
+
+            } catch (error) {
+                showError(`Parse Error: ${error.message}`);
+                tableContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #e74c3c;">Error parsing JSON</div>';
+            }
+        }
+
+        function extractRowsFromJSON(input) {
+            // Clean and prepare input
+            let cleanInput = input.trim();
+            
+            // Show first 100 characters for debugging
+            console.log('Input preview:', cleanInput.substring(0, 100));
+            
+            // Try to fix common JSON issues
+            const cleaningStrategies = [
+                // Strategy 1: Use input as-is
+                (text) => text,
+                
+                // Strategy 2: Remove BOM and trim
+                (text) => text.replace(/^\uFEFF/, '').trim(),
+                
+                // Strategy 3: Add missing opening brace if starts with "body":
+                (text) => {
+                    if (text.startsWith('"body":')) {
+                        return '{' + text + '}';
+                    }
+                    return text;
+                },
+                
+                // Strategy 4: Fix missing quotes around object
+                (text) => {
+                    if (!text.startsWith('{') && !text.startsWith('[')) {
+                        return '{"body": "' + text.replace(/"/g, '\\"') + '"}';
+                    }
+                    return text;
+                },
+                
+                // Strategy 5: Wrap in object if it looks like a body value
+                (text) => {
+                    if (text.startsWith('{"rows":')) {
+                        return '{"body": "' + text.replace(/"/g, '\\"') + '"}';
+                    }
+                    return text;
+                }
+            ];
+            
+            // Try multiple parsing strategies with cleaned input
+            for (let cleanStrategy of cleaningStrategies) {
+                const processedInput = cleanStrategy(cleanInput);
+                console.log('Trying cleaned input:', processedInput.substring(0, 100));
+                
+                const strategies = [
+                    // Strategy 1: Direct array
+                    () => {
+                        const data = JSON.parse(processedInput);
+                        if (Array.isArray(data)) return data;
+                        throw new Error('Not a direct array');
+                    },
+                    
+                    // Strategy 2: Standard body.rows structure
+                    () => {
+                        const data = JSON.parse(processedInput);
+                        if (data.body) {
+                            const bodyData = JSON.parse(data.body);
+                            if (bodyData.rows) {
+                                return typeof bodyData.rows === 'string' 
+                                    ? JSON.parse(bodyData.rows)
+                                    : bodyData.rows;
+                            }
+                        }
+                        throw new Error('No body.rows found');
+                    },
+                    
+                    // Strategy 3: Handle heavily escaped JSON
+                    () => {
+                        const data = JSON.parse(processedInput);
+                        if (data.body) {
+                            const bodyData = JSON.parse(data.body);
+                            if (bodyData.rows && typeof bodyData.rows === 'string') {
+                                let rowsString = bodyData.rows;
+                                
+                                // Try progressive unescaping
+                                const unescapingMethods = [
+                                    (s) => JSON.parse(s),
+                                    (s) => JSON.parse(s.replace(/\\"/g, '"').replace(/\\\\/g, '\\')),
+                                    (s) => {
+                                        let result = s
+                                            .replace(/\\\\\\\"/g, '"')
+                                            .replace(/\\\"/g, '"')
+                                            .replace(/\\\\/g, '\\');
+                                        return JSON.parse(result);
+                                    }
+                                ];
+                                
+                                for (let method of unescapingMethods) {
+                                    try {
+                                        return method(rowsString);
+                                    } catch (e) {
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        throw new Error('Cannot parse heavily escaped JSON');
+                    },
+                    
+                    // Strategy 4: Direct rows property
+                    () => {
+                        const data = JSON.parse(processedInput);
+                        if (data.rows) {
+                            return typeof data.rows === 'string' 
+                                ? JSON.parse(data.rows)
+                                : data.rows;
+                        }
+                        throw new Error('No rows property');
+                    },
+                    
+                    // Strategy 5: Single object wrapper
+                    () => {
+                        const data = JSON.parse(processedInput);
+                        return [data];
+                    }
+                ];
+
+                // Try each strategy until one works
+                for (let i = 0; i < strategies.length; i++) {
+                    try {
+                        const result = strategies[i]();
+                        if (Array.isArray(result) && result.length > 0) {
+                            console.log(`Success with cleaning strategy ${cleaningStrategies.indexOf(cleanStrategy) + 1}, parsing strategy ${i + 1}`);
+                            return result;
+                        }
+                    } catch (e) {
+                        console.log(`Strategy ${i + 1} failed:`, e.message);
+                    }
+                }
+            }
+            
+            throw new Error('All parsing strategies failed. Please check your JSON format.');
+        }
+
+        function generateTable(rows) {
+            if (rows.length === 0) return '';
+
+            // Get all unique keys from all rows
+            const allKeys = new Set();
+            rows.forEach(row => {
+                Object.keys(row).forEach(key => allKeys.add(key));
+            });
+            const headers = Array.from(allKeys);
+
+            // Calculate initial column widths
+            const columnWidth = Math.max(120, Math.floor(800 / headers.length));
+
+            // Generate search filters
+            let searchHtml = '<div class="search-container">';
+            searchHtml += '<div class="search-filters">';
+            headers.forEach((header, index) => {
+                searchHtml += `
+                    <div class="search-filter">
+                        <label for="filter-${index}">${escapeHtml(header)}</label>
+                        <input type="text" id="filter-${index}" placeholder="Filter ${escapeHtml(header)}..." data-column="${index}">
+                    </div>
+                `;
+            });
+            searchHtml += '</div>';
+            searchHtml += '<div class="search-actions">';
+            searchHtml += '<button class="search-btn" onclick="applyFilters()">Apply Filters</button>';
+            searchHtml += '<button class="search-btn clear-search-btn" onclick="clearFilters()">Clear All</button>';
+            searchHtml += '</div>';
+            searchHtml += '</div>';
+
+            // Generate table HTML
+            let html = searchHtml + '<table id="dataTable">';
+            
+            // Headers with resize handles
+            html += '<thead><tr>';
+            headers.forEach((header, index) => {
+                html += `<th style="width: ${columnWidth}px; min-width: 80px;" data-column="${index}">
+                    <span>${escapeHtml(header)}</span>
+                    <div class="resize-handle" data-column="${index}"></div>
+                </th>`;
+            });
+            html += '</tr></thead>';
+
+            // Body
+            html += '<tbody>';
+            rows.forEach((row, rowIndex) => {
+                html += `<tr data-row="${rowIndex}">`;
+                headers.forEach((header, index) => {
+                    const value = row[header] !== undefined ? row[header] : '';
+                    html += `<td style="width: ${columnWidth}px;" title="${escapeHtml(String(value))}" data-column="${index}">${escapeHtml(String(value))}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            return html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showError(message) {
+            document.getElementById('status').innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function showSuccess(message) {
+            document.getElementById('status').innerHTML = `<div class="success">${message}</div>`;
+        }
+
+        function clearAll() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('stats').innerHTML = '';
+            document.getElementById('tableContainer').innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #666;">
+                    <p>No data to display</p>
+                    <p style="font-size: 12px; margin-top: 10px;">Paste JSON in the left panel and click "Parse to Table"</p>
+                </div>
+            `;
+        }
+
+        function initializeColumnResizing() {
+            const table = document.getElementById('dataTable');
+            if (!table) return;
+
+            let isResizing = false;
+            let currentColumn = null;
+            let startX = 0;
+            let startWidth = 0;
+
+            // Add event listeners to resize handles
+            const resizeHandles = table.querySelectorAll('.resize-handle');
+            resizeHandles.forEach(handle => {
+                handle.addEventListener('mousedown', startResize);
+            });
+
+            function startResize(e) {
+                isResizing = true;
+                currentColumn = parseInt(e.target.dataset.column);
+                startX = e.clientX;
+                
+                const th = e.target.parentElement;
+                startWidth = parseInt(window.getComputedStyle(th).width);
+                
+                document.body.classList.add('resizing');
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+                
+                e.preventDefault();
+            }
+
+            function doResize(e) {
+                if (!isResizing) return;
+                
+                const diff = e.clientX - startX;
+                const newWidth = Math.max(80, startWidth + diff);
+                
+                // Update all cells in this column
+                const thElements = table.querySelectorAll(`th[data-column="${currentColumn}"]`);
+                const tdElements = table.querySelectorAll(`tbody tr td:nth-child(${currentColumn + 1})`);
+                
+                thElements.forEach(th => {
+                    th.style.width = newWidth + 'px';
+                });
+                
+                tdElements.forEach(td => {
+                    td.style.width = newWidth + 'px';
+                });
+            }
+
+            function stopResize() {
+                isResizing = false;
+                currentColumn = null;
+                document.body.classList.remove('resizing');
+                document.removeEventListener('mousemove', doResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
+        }
+
+        function applyFilters() {
+            const table = document.getElementById('dataTable');
+            if (!table) return;
+
+            const filters = [];
+            const filterInputs = document.querySelectorAll('.search-filter input');
+            
+            // Get all filter values
+            filterInputs.forEach((input, index) => {
+                const value = input.value.toLowerCase().trim();
+                filters[index] = value;
+            });
+
+            // Filter rows
+            const rows = table.querySelectorAll('tbody tr');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                let shouldShow = true;
+                
+                // Check each column against its filter
+                filters.forEach((filterValue, columnIndex) => {
+                    if (filterValue) {
+                        const cell = row.querySelector(`td[data-column="${columnIndex}"]`);
+                        if (cell) {
+                            const cellText = cell.textContent.toLowerCase();
+                            if (!cellText.includes(filterValue)) {
+                                shouldShow = false;
+                            }
+                        }
+                    }
+                });
+                
+                if (shouldShow) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update stats
+            const statsDiv = document.getElementById('stats');
+            const totalRows = rows.length;
+            if (visibleCount !== totalRows) {
+                statsDiv.innerHTML = `Showing: ${visibleCount} of ${totalRows} rows | Columns: ${filters.length}`;
+            } else {
+                statsDiv.innerHTML = `Rows: ${totalRows} | Columns: ${filters.length}`;
+            }
+        }
+
+        function clearFilters() {
+            const filterInputs = document.querySelectorAll('.search-filter input');
+            filterInputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Show all rows
+            const table = document.getElementById('dataTable');
+            if (table) {
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    row.style.display = '';
+                });
+                
+                // Reset stats
+                const statsDiv = document.getElementById('stats');
+                const totalRows = rows.length;
+                const totalColumns = document.querySelectorAll('.search-filter').length;
+                statsDiv.innerHTML = `Rows: ${totalRows} | Columns: ${totalColumns}`;
+            }
+        }
+
+        function initializeTableFilters() {
+            // Add real-time filtering on input change
+            const filterInputs = document.querySelectorAll('.search-filter input');
+            filterInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    // Debounce the filtering for better performance
+                    clearTimeout(this.filterTimeout);
+                    this.filterTimeout = setTimeout(() => {
+                        applyFilters();
+                    }, 300);
+                });
+                
+                // Apply filter on Enter key
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        applyFilters();
+                    }
+                });
+            });
+        }
+
+        // Auto-parse on Ctrl+Enter
+        document.getElementById('jsonInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                parseJSON();
+            }
+        });
+
+        // Initialize column splitter
+        function initializeColumnSplitter() {
+            const splitter = document.getElementById('splitter');
+            const leftColumn = document.querySelector('.left-column');
+            const rightColumn = document.querySelector('.right-column');
+            const container = document.querySelector('.container');
+
+            let isResizing = false;
+
+            splitter.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                document.body.classList.add('resizing-columns');
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                e.preventDefault();
+            });
+
+            function handleMouseMove(e) {
+                if (!isResizing) return;
+
+                const containerRect = container.getBoundingClientRect();
+                const containerLeft = containerRect.left;
+                const containerWidth = containerRect.width;
+                const mouseX = e.clientX - containerLeft;
+
+                // Calculate percentage (accounting for padding)
+                const paddingTotal = 40; // 20px padding on each side
+                const availableWidth = containerWidth - paddingTotal;
+                const leftPercentage = Math.max(20, Math.min(80, (mouseX - 20) / availableWidth * 100));
+
+                leftColumn.style.flex = `0 0 ${leftPercentage}%`;
+                rightColumn.style.flex = '1';
+            }
+
+            function handleMouseUp() {
+                isResizing = false;
+                document.body.classList.remove('resizing-columns');
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            }
+        }
+
+        // Initialize splitter when page loads
+        document.addEventListener('DOMContentLoaded', initializeColumnSplitter);
+    </script>
+</body>
+</html>
